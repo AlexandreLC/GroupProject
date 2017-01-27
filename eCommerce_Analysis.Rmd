@@ -18,7 +18,7 @@ always_allow_html: yes
 ```{r setuplibraries, echo=FALSE, message=FALSE}
 # SET UP
 local_directory <- "."
-suppressWarnings(source(paste(local_directory,"../BusinessDataAnalytics/AnalyticsLibraries/library.R", sep="/")))
+suppressWarnings(source(paste(local_directory,"AnalyticsLibraries/library.R", sep="/")))
 
 # Package options
 suppressWarnings(ggthemr('fresh'))  # ggplot theme
