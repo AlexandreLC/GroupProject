@@ -121,7 +121,7 @@ max_data_report = 10
 ```{r setupdata2E, echo=FALSE, tidy=TRUE}
 ProjectData <- read.csv(datafile_name)
 ProjectData <- data.matrix(ProjectData) 
-ProjectData_INITIAL <- ProjectData
+ProjectData_Numeric <- ProjectData[,7:ncol(ProjectData)]
 
 ```
 
