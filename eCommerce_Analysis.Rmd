@@ -1,5 +1,5 @@
 ---
-title: "Analyzing Lazada data"
+title: "Analyzing eCommerce data"
 author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann"
 output:
   html_document:
@@ -98,6 +98,31 @@ iplot.dendrogram <- function(cluster) {
       xlab("Observations") + ylab("Height")
   }
 }
+```
+
+We have gathered data from Lazada sales for 3 days. The goal of our analysis is to segment our customers 
+
+#Importing the data
+
+First step is of course to import the data
+
+```{r setupdata1E, echo=FALSE, tidy=TRUE}
+# Please ENTER the name of the file with the data used. 
+datafile_name = "SourceData.csv"
+
+# Please enter the minimum number below which you would like not to print - this makes the readability of the tables easier. Default values are either 10e6 (to print everything) or 0.5. Try both to see the difference.
+MIN_VALUE = 0.5
+
+# Please enter the maximum number of observations to show in the report and slides. 
+# DEFAULT is 10. If the number is large the report may be slow.
+max_data_report = 10
+```
+
+```{r setupdata2E, echo=FALSE, tidy=TRUE}
+ProjectData <- read.csv(datafile_name)
+ProjectData <- data.matrix(ProjectData) 
+ProjectData_INITIAL <- ProjectData
+
 ```
 
 
