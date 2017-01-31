@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Analyzing eCommerce data</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Analyzing eCommerce data">
+  <meta name="author" content="Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="http://slidifylibraries2.googlecode.com/git/inst/libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="http://slidifylibraries2.googlecode.com/git/inst/libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="http://slidifylibraries2.googlecode.com/git/inst/libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="http://slidifylibraries2.googlecode.com/git/inst/libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="http://slidifylibraries2.googlecode.com/git/inst/libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="http://slidifylibraries2.googlecode.com/git/inst/libraries/frameworks/io2012/js/slides" 
+    src="http://slidifylibraries2.googlecode.com/git/inst/libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Analyzing eCommerce data</h1>
+    <h2></h2>
+    <p>Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <article data-timings="">
+    <p>We have gathered data from Lazada sales for 3 days. The goal of our analysis is to segment our customers </p>
+
+<p>#Importing the data</p>
+
+<p>First step is of course to import the data.</p>
+
+<p>Here swe have two data files: </p>
+
+<ul>
+<li><p>&quot;Anonymized_transactions_all.csv&quot; which compiles all transactions that happened between January 1st and February 7th. Each row of the file corresponds to the purchase of one item (when various items are bought during the same transaction, several lines are created). The different fields listed in the file are:</p>
+
+<ul>
+<li>Order numer: unique identification of the order</li>
+<li>SKU number: identifier of an item in the ecommerce database</li>
+<li>Unit price of the item purchased</li>
+<li>Price paid for the item (can be different from the item price if there are promotions for example)</li>
+<li>Date of the order</li>
+<li>Time of the order</li>
+<li>Payment method used</li>
+<li>Price paid for the whole order</li>
+<li>Anonymized name of the customer (&quot;Anonym&quot;+several digits)</li>
+</ul></li>
+<li><p>&quot;Categories_all.csv&quot; contains a breakdown of each item into sub categories. Each line corresponds to an item that can be purchased through the ecommerce website. The different fields are:</p>
+
+<ul>
+<li>SKU number: the unique identifier for each item</li>
+<li>Item description: a sentence describing the item</li>
+<li>Category of the item</li>
+<li>Sub-category of the item</li>
+<li>Sub-sub-category of the item</li>
+</ul></li>
+</ul>
+
+<p>After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer.</p>
+
+<pre><code class="r"># We have to figure out at first the list of customers and of items sold
+Customer_list = as.character(Transaction_data[1, &quot;Anonym&quot;])
+ItemsSold_list = as.character(Transaction_data[1, &quot;SKU&quot;])
+for (i in 2:nbTransactiona) {
+    if (!(as.character(Transaction_data[i, &quot;Anonym&quot;]) %in% Customer_list)) {
+        Customer_list &lt;- c(Customer_list, as.character(Transaction_data[i, &quot;Anonym&quot;]))
+    }
+    if (!(as.character(Transaction_data[i, &quot;SKU&quot;]) %in% ItemsSold_list)) {
+        ItemsSold_list &lt;- c(ItemsSold_list, as.character(Transaction_data[i, 
+            &quot;SKU&quot;]))
+    }
+}
+
+# The number of unique customers and different items sold is then easy to
+# compute
+nbCustomers = length(Customer_list)
+nbItemsSold = length(ItemsSold_list)
+
+# Then we create a matrix that we will populate with the actual transactions
+Sales_Cust_Items = matrix(0 * 1:(nbCustomers * nbItemsSold), nrow = nbItemsSold, 
+    ncol = nbCustomers)
+colnames(Sales_Cust_Items) &lt;- Customer_list
+rownames(Sales_Cust_Items) &lt;- ItemsSold_list
+
+for (i in 1:nbTransactiona) {
+    itemsold = as.character(Transaction_data[i, &quot;SKU&quot;])
+    customer = as.character(Transaction_data[i, &quot;Anonym&quot;])
+    Sales_Cust_Items[itemsold, customer] &lt;- Sales_Cust_Items[itemsold, customer] + 
+        1
+}
+</code></pre>
+
+<p>We have created a variable Sales_Cust_Items</p>
+
+<p>#Basic data visualizations
+##Distribution of the number of items ordered per customer
+<strong>To be completed</strong></p>
+
+<p>##Distribution of number of orders per customer
+<strong>To be completed</strong></p>
+
+<p>#Segmentation of the customers
+Our data goes from January 1st to February 7th. The goal of this section is toi segment the customers to be able to predict relatively reliably the behavior of customers who have bought an item in January and who buy another one in February.
+Here we want to segment the customers that ordered more than one item in January. The idea is to be able to </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='NA'>
+         1
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="http://slidifylibraries2.googlecode.com/git/inst/libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
