@@ -215,7 +215,7 @@ Customer_JnF <- intersect(Customer_Jan, Customer_Feb)
 
 #Finally, we have to eliminate redundant customers from CustomerJnF
 
-Single_Customer_JnF=unique(Customer_JnF[1])
+Single_Customer_JnF=unique(Customer_JnF)
 
 
 #The variable Single_Customer_JnF now contains a list of non-redundant customers who both bought on January and February
@@ -230,8 +230,8 @@ Items_segm=NULL
 
 for (i in 1:nrow(Sales_Cust_Items)){
   if ((sum(Sales_Cust_Items[i,])>=Item_threshold)&!(as.character(rownames(Sales_Cust_Items)[i]) %in% Single_Customer_JnF)){
-    Customer_segm=c(Customer_segm, as.character(colnames(Sales_Cust_Items)[i]))
-    Item_to_add=names(Sales_Cust_Items[Sales_Cust_Items[i,]>0,i])
+    Customer_segm=c(Customer_segm, as.character(rownames(Sales_Cust_Items)[i]))
+    Item_to_add=names(Sales_Cust_Items[i,Sales_Cust_Items[i,]>0])
     Items_segm=c(Items_segm, as.character(Item_to_add))
   }
 }
