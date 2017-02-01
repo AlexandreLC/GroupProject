@@ -222,7 +222,7 @@ Single_Customer_JnF=unique(Customer_JnF)
 
 #Then we build the second dataset, customers who have purchased more than one item, excluding those that are already in the first dataset
 
-Item_threshold = 5 # We need to be able to adjust the relevant nb of items purchased
+Item_threshold = 2 # We need to be able to adjust the relevant nb of items purchased
 
 #We will at first extract the relevant customers and the items they bought
 Customer_segm=NULL
@@ -265,10 +265,10 @@ We can display data like:
 ```{r}
 
 # Here is how the `principal` function is used 
-UnRotated_Results<-principal(t(Matrix_segm), nfactors=nrow(Matrix_segm), rotate="none",score=TRUE)
-UnRotated_Factors<-round(UnRotated_Results$loadings,2)
-UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
-colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
+#UnRotated_Results<-principal(Matrix_segm, nfactors=ncol(Matrix_segm), rotate="none",score=TRUE)
+#UnRotated_Factors<-round(UnRotated_Results$loadings,2)
+#UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
+#colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
 ```
 
 ```{r, echo=FALSE}
