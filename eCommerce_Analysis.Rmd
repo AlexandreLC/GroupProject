@@ -144,7 +144,7 @@ max_data_report = 10
 Transaction_data <- read.csv(Transaction_datafile_name, sep=";")
 Categories_data <- read.csv(Categories_datafile_name, sep=";")
 
-nbTransactiona=nrow(Transaction_data)
+nbTransactions=nrow(Transaction_data)
 ```
 
 After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer.
@@ -153,7 +153,7 @@ After having imported the data, the idea is to create a new variable, that sums 
 #We have to figure out at first the list of customers and of items sold
 Customer_list = as.character(Transaction_data[1,"Anonym"])
 ItemsSold_list = as.character(Transaction_data[1,"SKU"])
-for (i in 2:nbTransactiona) {
+for (i in 2:nbTransactions) {
   if (!(as.character(Transaction_data[i,"Anonym"]) %in% Customer_list)){
     Customer_list<-c(Customer_list, as.character(Transaction_data[i,"Anonym"]))
   }
@@ -171,7 +171,7 @@ Sales_Cust_Items = matrix(0*1:(nbCustomers*nbItemsSold), nrow=nbItemsSold, ncol=
 colnames(Sales_Cust_Items) <- Customer_list
 rownames(Sales_Cust_Items) <- ItemsSold_list 
 
-for (i in 1:nbTransactiona){
+for (i in 1:nbTransactions){
   itemsold=as.character(Transaction_data[i,"SKU"])
   customer=as.character(Transaction_data[i,"Anonym"])
   Sales_Cust_Items[itemsold, customer]<-Sales_Cust_Items[itemsold, customer]+1
@@ -189,5 +189,97 @@ We have created a variable Sales_Cust_Items
 **To be completed**
 
 #Segmentation of the customers
-Our data goes from January 1st to February 7th. The goal of this section is toi segment the customers to be able to predict relatively reliably the behavior of customers who have bought an item in January and who buy another one in February.
-Here we want to segment the customers that ordered more than one item in January. The idea is to be able to 
+The goal of our analysis is to build an algorithm that would suggest other purchases to existing customers.
+
+Our data goes from January 1st to February 7th. We will divide the dataset in two:
+* First dataset regroups people who bought items in January and in February
+* Second dataset regroups people who ordered more than one items during January, excluding the customers who are already in the first dataset.
+
+We will use the second dataset to buid a segmentation of the customer based on the items they bought, and then use the second dataset to check if the segmentation is accurate enough to be predicitve: we will assign the customers from the first dataset in segments based on their purchases in January, and try then to anticipate their purchases in February.
+
+```{r, echo=FALSE}
+
+#The first step is to find the customers that purchased both in January and February
+
+#The dataset Transaction_data is already ordered by date, let's find the first purchase made in February 
+
+FirstPurchaseFeb = 1
+
+while((as.character(Transaction_data[FirstPurchaseFeb,"Created.Date"])!="01/02/2013")&(FirstPurchaseFeb<nbTransactions+1)) {
+  FirstPurchaseFeb<-FirstPurchaseFeb+1
+}
+
+Customer_Jan <- as.character(Transaction_data[1:(FirstPurchaseFeb-1), "Anonym"])
+Customer_Feb <- as.character(Transaction_data[FirstPurchaseFeb:nbTransactions, "Anonym"])
+Customer_JnF <- intersect(Customer_Jan, Customer_Feb)
+
+#Finally, we have to eliminate redundant customers from CustomerJnF
+
+Single_Customer_JnF=unique(Customer_JnF[1])
+
+
+#The variable Single_Customer_JnF now contains a list of non-redundant customers who both bought on January and February
+
+#Then we build the second dataset, customers who have purchased more than one item, excluding those that are already in the first dataset
+
+Item_threshold = 2 # We need to be able to adjust the relevant nb of items purchased
+
+#We will at first extract the relevant customers and the items they bought
+Customer_segm=NULL
+Items_segm=NULL
+
+for (i in 1:ncol(Sales_Cust_Items)){
+  if ((sum(Sales_Cust_Items[,i])>=Item_threshold)&!(as.character(colnames(Sales_Cust_Items)[i]) %in% Single_Customer_JnF)){
+    Customer_segm=c(Customer_segm, as.character(colnames(Sales_Cust_Items)[i]))
+    Item_to_add=names(Sales_Cust_Items[Sales_Cust_Items[,i]>0,i])
+    Items_segm=c(Items_segm, as.character(Item_to_add))
+  }
+}
+
+Items_segm=unique(Items_segm)
+
+# Now the variable Customer_segm contains all the customers that bought several items but only in January. The variable Items_segm contains the items they bought.
+# Let's build the matrix that contains the number of items they bought and store it in the variable Matrix_segm
+# The rows of the matrix will be the items bought and the column will be the customers
+
+Matrix_segm=matrix(0*1:(length(Items_segm)*length(Customer_segm)), nrow = length(Items_segm), ncol = length(Customer_segm))
+
+rownames(Matrix_segm)<-Items_segm
+colnames(Matrix_segm)<-Customer_segm
+
+Matrix_segm[Items_segm,Customer_segm]<-Sales_Cust_Items[Items_segm,Customer_segm]
+
+
+```
+
+##Data vizualization
+
+We can display data like:
+* Number of items sold per customer on average
+* Distribution of number of items sold
+* Amount spent per customer
+* ...
+
+```{r, echo=FALSE}
+#The goal of this section is to do a segmentation of the data from the second dataset
+
+#----------
+# CODE TO BE INSERTED here
+#-------------
+```
+
+```{r, echo=FALSE}
+#The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
+
+#----------
+# CODE TO BE INSERTED here
+#-------------
+```
+
+```{r, echo=FALSE}
+#The goal of this section is to widen the segmentation to a sub-category level
+
+#----------
+# CODE TO BE INSERTED here
+#-------------
+```
