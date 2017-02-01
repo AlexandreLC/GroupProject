@@ -167,14 +167,14 @@ nbCustomers=length(Customer_list)
 nbItemsSold=length(ItemsSold_list)
 
 #Then we create a matrix that we will populate with the actual transactions
-Sales_Cust_Items = matrix(0*1:(nbCustomers*nbItemsSold), nrow=nbItemsSold, ncol=nbCustomers)
-colnames(Sales_Cust_Items) <- Customer_list
-rownames(Sales_Cust_Items) <- ItemsSold_list 
+Sales_Cust_Items = matrix(0*1:(nbCustomers*nbItemsSold), ncol=nbItemsSold, nrow=nbCustomers)
+colnames(Sales_Cust_Items) <- ItemsSold_list
+rownames(Sales_Cust_Items) <- Customer_list
 
 for (i in 1:nbTransactions){
   itemsold=as.character(Transaction_data[i,"SKU"])
   customer=as.character(Transaction_data[i,"Anonym"])
-  Sales_Cust_Items[itemsold, customer]<-Sales_Cust_Items[itemsold, customer]+1
+  Sales_Cust_Items[customer,itemsold]<-Sales_Cust_Items[customer,itemsold]+1
 }
 
 ```
@@ -222,16 +222,16 @@ Single_Customer_JnF=unique(Customer_JnF[1])
 
 #Then we build the second dataset, customers who have purchased more than one item, excluding those that are already in the first dataset
 
-Item_threshold = 2 # We need to be able to adjust the relevant nb of items purchased
+Item_threshold = 5 # We need to be able to adjust the relevant nb of items purchased
 
 #We will at first extract the relevant customers and the items they bought
 Customer_segm=NULL
 Items_segm=NULL
 
-for (i in 1:ncol(Sales_Cust_Items)){
-  if ((sum(Sales_Cust_Items[,i])>=Item_threshold)&!(as.character(colnames(Sales_Cust_Items)[i]) %in% Single_Customer_JnF)){
+for (i in 1:nrow(Sales_Cust_Items)){
+  if ((sum(Sales_Cust_Items[i,])>=Item_threshold)&!(as.character(rownames(Sales_Cust_Items)[i]) %in% Single_Customer_JnF)){
     Customer_segm=c(Customer_segm, as.character(colnames(Sales_Cust_Items)[i]))
-    Item_to_add=names(Sales_Cust_Items[Sales_Cust_Items[,i]>0,i])
+    Item_to_add=names(Sales_Cust_Items[Sales_Cust_Items[i,]>0,i])
     Items_segm=c(Items_segm, as.character(Item_to_add))
   }
 }
@@ -240,14 +240,14 @@ Items_segm=unique(Items_segm)
 
 # Now the variable Customer_segm contains all the customers that bought several items but only in January. The variable Items_segm contains the items they bought.
 # Let's build the matrix that contains the number of items they bought and store it in the variable Matrix_segm
-# The rows of the matrix will be the items bought and the column will be the customers
+# The rows of the matrix will be the customers and the column will be the items they bought
 
-Matrix_segm=matrix(0*1:(length(Items_segm)*length(Customer_segm)), nrow = length(Items_segm), ncol = length(Customer_segm))
+Matrix_segm=matrix(0*1:(length(Items_segm)*length(Customer_segm)), ncol = length(Items_segm), nrow = length(Customer_segm))
 
-rownames(Matrix_segm)<-Items_segm
-colnames(Matrix_segm)<-Customer_segm
+colnames(Matrix_segm)<-Items_segm
+rownames(Matrix_segm)<-Customer_segm
 
-Matrix_segm[Items_segm,Customer_segm]<-Sales_Cust_Items[Items_segm,Customer_segm]
+Matrix_segm[Customer_segm,Items_segm]<-Sales_Cust_Items[Customer_segm,Items_segm]
 
 
 ```
@@ -260,12 +260,15 @@ We can display data like:
 * Amount spent per customer
 * ...
 
-```{r, echo=FALSE}
-#The goal of this section is to do a segmentation of the data from the second dataset
+##PCA analysis
 
-#----------
-# CODE TO BE INSERTED here
-#-------------
+```{r}
+
+# Here is how the `principal` function is used 
+UnRotated_Results<-principal(t(Matrix_segm), nfactors=nrow(Matrix_segm), rotate="none",score=TRUE)
+UnRotated_Factors<-round(UnRotated_Results$loadings,2)
+UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
+colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
 ```
 
 ```{r, echo=FALSE}
