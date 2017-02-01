@@ -183,7 +183,28 @@ We have created a variable Sales_Cust_Items
 
 #Basic data visualizations
 ##Distribution of the number of items ordered per customer
-**To be completed**
+
+```{r}
+# Plot of the distribution of nu;ber of items purchased on the whole period by each customer
+Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
+names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
+
+qplot(Number_of_Items_Purchased, 
+      data=Items_sold_per_customer, 
+      geom="histogram",
+      binwidth=1) + scale_x_continuous(limits = c(0, 20))
+
+```
+
+We can zoom in to check more in details.
+
+```{r}
+qplot(Number_of_Items_Purchased, 
+      data=Items_sold_per_customer, 
+      geom="histogram",
+      binwidth=1) + scale_x_continuous(limits = c(0, 20)) + scale_y_continuous(limits = c(0, 1000))
+
+```
 
 ##Distribution of number of orders per customer
 **To be completed**
@@ -259,6 +280,28 @@ We can display data like:
 * Distribution of number of items sold
 * Amount spent per customer
 * ...
+
+##Reduction in size of the matrix
+
+To make our computatins easier, we will associate each item to its category, thus drastically reducing the number of columns in the matrix.
+
+```{r}
+#Computing the correspondance matrix between SKU and Category.  
+SKU_Cat <-Categories_data[,"Category"] 
+names(SKU_Cat)<-Categories_data[,"SKU"]
+
+Category_list = SKU_Cat[colnames(Matrix_segm)]
+Category_list<-unique(Category_list)
+
+Category_matrix=matrix(0*1:(length(Category_list)*nrow(Matrix_segm)),nrow=nrow(Matrix_segm), ncol=length(Category_list))
+
+rownames(Category_matrix) <- Customer_segm
+colnames(Category_matrix) <- Category_list
+
+
+
+```
+
 
 ##PCA analysis
 
