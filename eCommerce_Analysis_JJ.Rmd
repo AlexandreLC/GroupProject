@@ -1,0 +1,293 @@
+---
+title: "Analyzing eCommerce data"
+author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann"
+output:
+  html_document:
+    css: AnalyticsStyles/default.css
+    theme: paper
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    includes:
+      in_header: AnalyticsStyles/default.sty
+always_allow_html: yes
+---
+
+```{r setuplibraries, echo=FALSE, message=FALSE}
+# SET UP
+local_directory <- "."
+suppressWarnings(source(paste(local_directory,"AnalyticsLibraries/library.R", sep="/")))
+
+# Package options
+suppressWarnings(ggthemr('fresh'))  # ggplot theme
+opts_knit$set(progress=FALSE, verbose=FALSE)
+opts_chunk$set(echo=FALSE, fig.align="center", fig.width=10, fig.height=6.35, results="asis")
+options(knitr.kable.NA = '')
+
+# Determine document output format, return "html" by default
+getDocumentOutputFormat <- function() {
+  format <- opts_knit$get('rmarkdown.pandoc.to')
+  if (!is.null(format)) format else "html"
+}
+
+# Format tables for html/latex output
+normalize.abs <- function(x, min=0, max=1, na.rm=FALSE) normalize(abs(x), min, max, na.rm)
+iprint.df <- function(df, scale=FALSE) {
+  if (getDocumentOutputFormat() == "html") {
+    if (class(df) != "data.frame")
+      df <- as.data.frame(df)
+    x <- lapply(colnames(df), function(col) {
+      if (is.numeric(df[, col]))
+        color_bar(rgb(238, 238, 238, max=255), normalize.abs, min=0.1, na.rm=TRUE)
+      else
+        formatter("span")
+    })
+    names(x) <- colnames(df)
+    tags$div(class="formattable_container", HTML(gsub("NA", "", format_table(df, x))))
+  } else if (opts_knit$get('rmarkdown.pandoc.to') == "latex") {
+    cat(ifelse(scale, "\\setkeys{Gin}{height=\\textheight}\\adjustbox{width=\\linewidth}{", "\\begin{center}"))
+    cat(kable(df, format="latex", booktabs=TRUE, longtable=!scale))
+    cat(ifelse(scale, "}\\setkeys{Gin}{height=\\maxheight}", "\\end{center}"))
+  } else {
+    kable(df)
+  }
+}
+
+# Format plots for html/latex output
+iplot.df <- function(df, x=colnames(df)[1], y="value", v="variable", type="line", xlab=NULL, ylab=NULL) {
+  if (getDocumentOutputFormat() == "html") {
+    p <- c3(df, x=x, y=y, group=v, width="100%", height="480px")
+    p <- switch(type,
+      line = p %>% c3_line('spline'),
+      bar  = p %>% c3_bar(bar_width=0.90)
+    )
+    if (!is.null(xlab)) p <- p %>% xAxis(label=xlab)
+    if (!is.null(ylab)) p <- p %>% yAxis(label=ylab)
+    p
+  } else {  # latex, etc.
+    p <- ggplot(df, aes_string(x=x, y=y, colour=v))
+    p <- switch(type,
+      line = p + geom_line(),
+      bar  = p + geom_bar(stat="identity")
+    )
+    if (!is.null(xlab)) p <- p + labs(x=xlab)
+    if (!is.null(ylab)) p <- p + labs(y=ylab)
+    p
+  }
+}
+
+iplot.hist <- function(x, breaks="Sturges", xlab=NULL) {
+  h <- hist(x, breaks=breaks, plot=FALSE)
+  df <- data.frame(x=head(h$breaks, -1), Frequency=h$counts)
+  iplot.df(df, x="x", y="Frequency", v=NULL, type="bar", xlab=xlab)
+}
+
+iplot.grid <- if (getDocumentOutputFormat() == "html") tags$div else grid.arrange
+
+iplot.dendrogram <- function(cluster) {
+  labels <- (length(cluster$labels) > 40)
+  if (getDocumentOutputFormat() == "html") {
+    cluster$labels <- if (!labels) NULL else cluster$labels
+    margins <- list(top=10, right=0, bottom=ifelse(labels, 120, 10), left=0)
+    dendroNetwork(cluster, width="100%", height="480px", fontSize=14,
+                  treeOrientation="vertical", margins=margins, textRotate=90)
+  } else {  # latex, etc.
+    ggdendrogram(Hierarchical_Cluster, theme_dendro=FALSE, labels=labels) +
+      xlab("Observations") + ylab("Height")
+  }
+}
+```
+
+We have gathered data from eCommerce website sales for 3 days. The goal of our analysis is to segment our customers 
+
+#Importing the data
+
+First step is of course to import the data.
+
+Here swe have two data files: 
+
+* "Anonymized_transactions_all.csv" which compiles all transactions that happened between January 1st and February 7th. Each row of the file corresponds to the purchase of one item (when various items are bought during the same transaction, several lines are created). The different fields listed in the file are:
+  + Order numer: unique identification of the order
+  + SKU number: identifier of an item in the ecommerce database
+  + Unit price of the item purchased
+  + Price paid for the item (can be different from the item price if there are promotions for example)
+  + Date of the order
+  + Time of the order
+  + Payment method used
+  + Price paid for the whole order
+  + Anonymized name of the customer ("Anonym"+several digits)
+  
+* "Categories_all.csv" contains a breakdown of each item into sub categories. Each line corresponds to an item that can be purchased through the ecommerce website. The different fields are:
+  + SKU number: the unique identifier for each item
+  + Item description: a sentence describing the item
+  + Category of the item
+  + Sub-category of the item
+  + Sub-sub-category of the item
+
+```{r, echo=FALSE, tidy=TRUE}
+# Please ENTER the name of the files with the data used. 
+Transaction_datafile_name = "Anonymized_transactions_all.csv"
+Categories_datafile_name = "Categories_all.csv"
+
+# Please enter the minimum number below which you would like not to print - this makes the readability of the tables easier. Default values are either 10e6 (to print everything) or 0.5. Try both to see the difference.
+MIN_VALUE = 0.5
+
+# Please enter the maximum number of observations to show in the report and slides. 
+# DEFAULT is 10. If the number is large the report may be slow.
+max_data_report = 10
+```
+
+```{r, echo=FALSE, tidy=TRUE}
+#This simply reads the CSV files and creates two variables containing text data
+Transaction_data <- read.csv(Transaction_datafile_name, sep=";")
+Categories_data <- read.csv(Categories_datafile_name, sep=";")
+
+nbTransactions=nrow(Transaction_data)
+```
+
+After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer.
+
+```{r, echo=TRUE, tidy=TRUE}
+#We have to figure out at first the list of customers and of items sold
+Customer_list = as.character(Transaction_data[1,"Anonym"])
+ItemsSold_list = as.character(Transaction_data[1,"SKU"])
+for (i in 2:nbTransactions) {
+  if (!(as.character(Transaction_data[i,"Anonym"]) %in% Customer_list)){
+    Customer_list<-c(Customer_list, as.character(Transaction_data[i,"Anonym"]))
+  }
+  if (!(as.character(Transaction_data[i,"SKU"]) %in% ItemsSold_list)){
+    ItemsSold_list<-c(ItemsSold_list, as.character(Transaction_data[i,"SKU"]))
+  }
+}
+
+#The number of unique customers and different items sold is then easy to compute
+nbCustomers=length(Customer_list)
+nbItemsSold=length(ItemsSold_list)
+
+#Then we create a matrix that we will populate with the actual transactions
+Sales_Cust_Items = matrix(0*1:(nbCustomers*nbItemsSold), ncol=nbItemsSold, nrow=nbCustomers)
+colnames(Sales_Cust_Items) <- ItemsSold_list
+rownames(Sales_Cust_Items) <- Customer_list
+
+for (i in 1:nbTransactions){
+  itemsold=as.character(Transaction_data[i,"SKU"])
+  customer=as.character(Transaction_data[i,"Anonym"])
+  Sales_Cust_Items[customer,itemsold]<-Sales_Cust_Items[customer,itemsold]+1
+}
+
+```
+
+We have created a variable Sales_Cust_Items
+
+#Basic data visualizations
+##Distribution of the number of items ordered per customer
+
+```{r echo=FALSE, comment=NA, warning=FALSE, message=FALSE,results='asis',fig.align='center', fig=TRUE}
+Total_Sales_Cust = rowSums(Sales_Cust_Items[,2:ncol(Sales_Cust_Items)])
+ggplot(as.double(Total_Sales_Cust), aes(Total_Sales_Cust[,2]))
+```
+
+
+##Distribution of number of orders per customer
+**To be completed**
+
+#Segmentation of the customers
+The goal of our analysis is to build an algorithm that would suggest other purchases to existing customers.
+
+Our data goes from January 1st to February 7th. We will divide the dataset in two:
+* First dataset regroups people who bought items in January and in February
+* Second dataset regroups people who ordered more than one items during January, excluding the customers who are already in the first dataset.
+
+We will use the second dataset to buid a segmentation of the customer based on the items they bought, and then use the second dataset to check if the segmentation is accurate enough to be predicitve: we will assign the customers from the first dataset in segments based on their purchases in January, and try then to anticipate their purchases in February.
+
+```{r, echo=FALSE}
+
+#The first step is to find the customers that purchased both in January and February
+
+#The dataset Transaction_data is already ordered by date, let's find the first purchase made in February 
+
+FirstPurchaseFeb = 1
+
+while((as.character(Transaction_data[FirstPurchaseFeb,"Created.Date"])!="01/02/2013")&(FirstPurchaseFeb<nbTransactions+1)) {
+  FirstPurchaseFeb<-FirstPurchaseFeb+1
+}
+
+Customer_Jan <- as.character(Transaction_data[1:(FirstPurchaseFeb-1), "Anonym"])
+Customer_Feb <- as.character(Transaction_data[FirstPurchaseFeb:nbTransactions, "Anonym"])
+Customer_JnF <- intersect(Customer_Jan, Customer_Feb)
+
+#Finally, we have to eliminate redundant customers from CustomerJnF
+
+Single_Customer_JnF=unique(Customer_JnF)
+
+
+#The variable Single_Customer_JnF now contains a list of non-redundant customers who both bought on January and February
+
+#Then we build the second dataset, customers who have purchased more than one item, excluding those that are already in the first dataset
+
+Item_threshold = 2 # We need to be able to adjust the relevant nb of items purchased
+
+#We will at first extract the relevant customers and the items they bought
+Customer_segm=NULL
+Items_segm=NULL
+
+for (i in 1:nrow(Sales_Cust_Items)){
+  if ((sum(Sales_Cust_Items[i,])>=Item_threshold)&!(as.character(rownames(Sales_Cust_Items)[i]) %in% Single_Customer_JnF)){
+    Customer_segm=c(Customer_segm, as.character(rownames(Sales_Cust_Items)[i]))
+    Item_to_add=names(Sales_Cust_Items[i,Sales_Cust_Items[i,]>0])
+    Items_segm=c(Items_segm, as.character(Item_to_add))
+  }
+}
+
+Items_segm=unique(Items_segm)
+
+# Now the variable Customer_segm contains all the customers that bought several items but only in January. The variable Items_segm contains the items they bought.
+# Let's build the matrix that contains the number of items they bought and store it in the variable Matrix_segm
+# The rows of the matrix will be the customers and the column will be the items they bought
+
+Matrix_segm=matrix(0*1:(length(Items_segm)*length(Customer_segm)), ncol = length(Items_segm), nrow = length(Customer_segm))
+
+colnames(Matrix_segm)<-Items_segm
+rownames(Matrix_segm)<-Customer_segm
+
+Matrix_segm[Customer_segm,Items_segm]<-Sales_Cust_Items[Customer_segm,Items_segm]
+
+
+```
+
+##Data vizualization
+
+We can display data like:
+* Number of items sold per customer on average
+* Distribution of number of items sold
+* Amount spent per customer
+* ...
+
+##PCA analysis
+
+```{r}
+
+# Here is how the `principal` function is used 
+#UnRotated_Results<-principal(Matrix_segm, nfactors=ncol(Matrix_segm), rotate="none",score=TRUE)
+#UnRotated_Factors<-round(UnRotated_Results$loadings,2)
+#UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
+#colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
+```
+
+```{r, echo=FALSE}
+#The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
+
+#----------
+# CODE TO BE INSERTED here
+#-------------
+```
+
+```{r, echo=FALSE}
+#The goal of this section is to widen the segmentation to a sub-category level
+
+#----------
+# CODE TO BE INSERTED here
+#-------------
+```
