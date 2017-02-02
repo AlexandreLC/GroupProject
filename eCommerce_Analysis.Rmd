@@ -144,7 +144,28 @@ max_data_report = 10
 Transaction_data <- read.csv(Transaction_datafile_name, sep=";")
 Categories_data <- read.csv(Categories_datafile_name, sep=";")
 
+
+
+#For later use, we have to remove the items that don't have any category from the dataset
+#Variable SKU_Cat will be a vector containing the categories and whose names are the SKUs present in the datafile "Categories_all.csv"
+SKU_Cat <-Categories_data[,"Category"] 
+names(SKU_Cat)<-Categories_data[,"SKU"]
+
+#Next, let's exclude the transaction involving SKU not present in the datafile "Categories_all.csv"
+blacklist=NULL
+for (i in 1:nrow(Transaction_data)){
+  if (!(as.character(Transaction_data[i,"SKU"]) %in% names(SKU_Cat))){
+    blacklist=c(blacklist,i)
+  }
+}
+
+#we keep only the ones that are present in the datafile "Categories_all.csv"
+Transaction_data<-Transaction_data[-blacklist,]
+
+
 nbTransactions=nrow(Transaction_data)
+
+
 ```
 
 After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer.
@@ -192,7 +213,7 @@ names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
 qplot(Number_of_Items_Purchased, 
       data=Items_sold_per_customer, 
       geom="histogram",
-      binwidth=1) + scale_x_continuous(limits = c(0, 20))
+      binwidth=1) + scale_x_continuous(limits = c(0, 15))
 
 ```
 
@@ -202,7 +223,7 @@ We can zoom in to check more in details.
 qplot(Number_of_Items_Purchased, 
       data=Items_sold_per_customer, 
       geom="histogram",
-      binwidth=1) + scale_x_continuous(limits = c(0, 20)) + scale_y_continuous(limits = c(0, 1000))
+      binwidth=1) + scale_x_continuous(limits = c(0, 15)) + scale_y_continuous(limits = c(0, 1000))
 
 ```
 
@@ -281,15 +302,107 @@ We can display data like:
 * Amount spent per customer
 * ...
 
-##Reduction in size of the matrix
+```{r}
+# Plot of the distribution of number of items purchased on the whole period by each customer
+Items_sold_per_customer_restricted = as.data.frame(apply(Matrix_segm,1,sum))
+names(Items_sold_per_customer_category)<-"Number_of_Items_Purchased"
 
-To make our computatins easier, we will associate each item to its category, thus drastically reducing the number of columns in the matrix.
+qplot(Number_of_Items_Purchased, 
+      data=Items_sold_per_customer_category, 
+      geom="histogram",
+      binwidth=1) + scale_x_continuous(limits = c(0, 15))
+
+```
+
+##Analysis of the results
+
+TO BE COMPLETED
+
+#Use of categories instead of item name
+
+Not every item has a sub_category in the file "Categories_all.csv", so we will define the subcategory as the concatenation of the Category and the Subcategory found in the datafile.
+
+It means that if an item doesn't have a subcategory, it will be referenced by its category.
+
+```{r}
+#Computing the correspondance matrix between SKU and Sub-Category.  
+SKU_SubCat <-paste(SKU_Cat,Categories_data[,"SubCategory"],sep="_")
+names(SKU_SubCat)<-Categories_data[,"SKU"]
+
+SubCategory_list = SKU_SubCat[colnames(Matrix_segm)]
+SubCategory_list<-unique(SubCategory_list)
+
+SubCategory_matrix=matrix(0*1:(length(SubCategory_list)*nrow(Matrix_segm)),nrow=nrow(Matrix_segm), ncol=length(SubCategory_list))
+
+rownames(SubCategory_matrix) <- Customer_segm
+colnames(SubCategory_matrix) <- SubCategory_list
+
+
+for (i in 1:nrow(Transaction_data)) {
+  Customer_tmp<-as.character(Transaction_data[i,"Anonym"])
+  Item_tmp<-as.character(Transaction_data[i,"SKU"])
+  SubCategory_tmp<-as.character(SKU_SubCat[Item_tmp])
+   
+  if (Customer_tmp %in% Customer_segm){
+    SubCategory_matrix[Customer_tmp,SubCategory_tmp]<-SubCategory_matrix[Customer_tmp,SubCategory_tmp]+1
+  }
+}
+
+```
+
+```{r}
+# Plot of the distribution of number of items purchased on the whole period by each customer
+Items_sold_per_subcategory = as.data.frame(apply(SubCategory_matrix,2,sum))
+names(Items_sold_per_subcategory)<-"Number_of_Items_Purchased_Per_SubCat"
+
+ggplot(x=rownames(Items_sold_per_subcategory),
+      y= apply(SubCategory_matrix,2,sum), 
+      geom="hist") 
+
+```
+
+##PCA analysis
+
+```{r}
+
+# Here is how the `principal` function is used 
+UnRotated_Results<-principal(SubCategory_matrix, nfactors=ncol(SubCategory_matrix), rotate="none",score=TRUE)
+UnRotated_Factors<-round(UnRotated_Results$loadings,2)
+UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
+colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
+
+```
+
+```{r}
+# Here is how we use the `PCA` function 
+Variance_Explained_Table_results<-PCA(SubCategory_matrix, graph=FALSE)
+Variance_Explained_Table<-Variance_Explained_Table_results$eig
+Variance_Explained_Table_copy<-Variance_Explained_Table
+
+rownames(Variance_Explained_Table) <- paste("Component", 1:nrow(Variance_Explained_Table), sep=" ")
+colnames(Variance_Explained_Table) <- c("Eigenvalue", "Pct of explained variance", "Cumulative pct of explained variance")
+```
+
+Let's look at the **variance explained** as well as the **eigenvalues** :
+
+```{r}
+iprint.df(round(Variance_Explained_Table, 2))
+```
+
+```{r}
+eigenvalues  <- Variance_Explained_Table[, "Eigenvalue"]
+df           <- cbind(as.data.frame(eigenvalues), c(1:length(eigenvalues)), rep(1, length(eigenvalues)))
+colnames(df) <- c("eigenvalues", "components", "abline")
+iplot.df(melt(df, id="components"))
+```
+
+
+#Use of Sub-categories
+
+To make our computatinos easier, we will associate each item to its category, thus drastically reducing the number of columns in the matrix.
 
 ```{r}
 #Computing the correspondance matrix between SKU and Category.  
-SKU_Cat <-Categories_data[,"Category"] 
-names(SKU_Cat)<-Categories_data[,"SKU"]
-
 Category_list = SKU_Cat[colnames(Matrix_segm)]
 Category_list<-unique(Category_list)
 
@@ -299,20 +412,62 @@ rownames(Category_matrix) <- Customer_segm
 colnames(Category_matrix) <- Category_list
 
 
+for (i in 1:nrow(Transaction_data)) {
+  Customer_tmp<-as.character(Transaction_data[i,"Anonym"])
+  Item_tmp<-as.character(Transaction_data[i,"SKU"])
+  Category_tmp<-as.character(SKU_Cat[Item_tmp])
+   
+  if (Customer_tmp %in% Customer_segm){
+    Category_matrix[Customer_tmp,Category_tmp]<-Category_matrix[Customer_tmp,Category_tmp]+1
+  }
+}
 
 ```
 
+```{r}
+# Plot of the distribution of number of items purchased on the whole period by each customer
+Items_sold_per_category = as.data.frame(apply(Category_matrix,2,sum))
+names(Items_sold_per_category)<-"Number_of_Items_Purchased_Per_Cat"
+
+ggplot(x=rownames(Items_sold_per_category),
+      y= apply(Category_matrix,2,sum), 
+      geom="hist") 
+
+```
 
 ##PCA analysis
 
 ```{r}
 
 # Here is how the `principal` function is used 
-#UnRotated_Results<-principal(Matrix_segm, nfactors=ncol(Matrix_segm), rotate="none",score=TRUE)
-#UnRotated_Factors<-round(UnRotated_Results$loadings,2)
-#UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
-#colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
+UnRotated_Results<-principal(Category_matrix, nfactors=ncol(Category_matrix), rotate="none",score=TRUE)
+UnRotated_Factors<-round(UnRotated_Results$loadings,2)
+UnRotated_Factors<-as.data.frame(unclass(UnRotated_Factors))
+colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
+
 ```
+
+```{r}
+# Here is how we use the `PCA` function 
+Variance_Explained_Table_results<-PCA(Category_matrix, graph=FALSE)
+Variance_Explained_Table<-Variance_Explained_Table_results$eig
+Variance_Explained_Table_copy<-Variance_Explained_Table
+
+rownames(Variance_Explained_Table) <- paste("Component", 1:nrow(Variance_Explained_Table), sep=" ")
+colnames(Variance_Explained_Table) <- c("Eigenvalue", "Pct of explained variance", "Cumulative pct of explained variance")
+```
+
+Let's look at the **variance explained** as well as the **eigenvalues** :
+
+```{r}
+iprint.df(round(Variance_Explained_Table, 2))
+```
+
+```{r}
+eigenvalues  <- Variance_Explained_Table[, "Eigenvalue"]
+df           <- cbind(as.data.frame(eigenvalues), c(1:length(eigenvalues)), rep(1, length(eigenvalues)))
+colnames(df) <- c("eigenvalues", "components", "abline")
+iplot.df(melt(df, id="components"))
 
 ```{r, echo=FALSE}
 #The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
