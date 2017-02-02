@@ -16,13 +16,14 @@ always_allow_html: yes
 ---
 
 ```{r setuplibraries, echo=FALSE, message=FALSE}
+rmarkdown::render_site("eCommerce_Analysis.Rmd")
 # SET UP
 local_directory <- "."
 suppressWarnings(source(paste(local_directory,"AnalyticsLibraries/library.R", sep="/")))
 
 # Package options
 suppressWarnings(ggthemr('fresh'))  # ggplot theme
-opts_knit$set(progress=FALSE, verbose=FALSE)
+opts_knit$set(progress=FALSE, verbose=TRUE)
 opts_chunk$set(echo=FALSE, fig.align="center", fig.width=10, fig.height=6.35, results="asis")
 options(knitr.kable.NA = '')
 
@@ -151,15 +152,17 @@ Categories_data <- read.csv(Categories_datafile_name, sep=";")
 SKU_Cat <-Categories_data[,"Category"] 
 names(SKU_Cat)<-Categories_data[,"SKU"]
 
-#Next, let's exclude the transaction involving SKU not present in the datafile "Categories_all.csv"
-blacklist=NULL
+#We have to exclude some customers, linked to fake accounts (created for debug purposes by the ecommerce website)
+blacklist=c("Customer254", "Customer262", "Customer302", "Customer9869")
+
+#Next, let's add to this blacklist the transactions involving SKU not present in the datafile "Categories_all.csv"
 for (i in 1:nrow(Transaction_data)){
   if (!(as.character(Transaction_data[i,"SKU"]) %in% names(SKU_Cat))){
     blacklist=c(blacklist,i)
   }
 }
 
-#we keep only the ones that are present in the datafile "Categories_all.csv"
+#we keep only the ones that are not on the blacklist
 Transaction_data<-Transaction_data[-blacklist,]
 
 
@@ -469,18 +472,10 @@ df           <- cbind(as.data.frame(eigenvalues), c(1:length(eigenvalues)), rep(
 colnames(df) <- c("eigenvalues", "components", "abline")
 iplot.df(melt(df, id="components"))
 
-```{r, echo=FALSE}
-#The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
-
-#----------
-# CODE TO BE INSERTED here
-#-------------
 ```
 
-```{r, echo=FALSE}
-#The goal of this section is to widen the segmentation to a sub-category level
+The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
 
-#----------
-# CODE TO BE INSERTED here
-#-------------
-```
+----------
+ CODE TO BE INSERTED here
+-------------
