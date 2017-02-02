@@ -153,6 +153,7 @@ After having imported the data, the idea is to create a new variable, that sums 
 #We have to figure out at first the list of customers and of items sold
 Customer_list = as.character(Transaction_data[1,"Anonym"])
 ItemsSold_list = as.character(Transaction_data[1,"SKU"])
+Orders_list = as.character(Transaction_data[1,"Order.Number"])
 for (i in 2:nbTransactions) {
   if (!(as.character(Transaction_data[i,"Anonym"]) %in% Customer_list)){
     Customer_list<-c(Customer_list, as.character(Transaction_data[i,"Anonym"]))
@@ -160,11 +161,15 @@ for (i in 2:nbTransactions) {
   if (!(as.character(Transaction_data[i,"SKU"]) %in% ItemsSold_list)){
     ItemsSold_list<-c(ItemsSold_list, as.character(Transaction_data[i,"SKU"]))
   }
+  if (!(as.character(Transaction_data[i,"Order.Number"]) %in% Orders_list)){
+    Orders_list<-c(Orders_list, as.character(Transaction_data[i,"Order.Number"]))
+  }
 }
 
 #The number of unique customers and different items sold is then easy to compute
 nbCustomers=length(Customer_list)
 nbItemsSold=length(ItemsSold_list)
+nbOrders=length(Orders_list)
 
 #Then we create a matrix that we will populate with the actual transactions
 Sales_Cust_Items = matrix(0*1:(nbCustomers*nbItemsSold), ncol=nbItemsSold, nrow=nbCustomers)
@@ -177,6 +182,17 @@ for (i in 1:nbTransactions){
   Sales_Cust_Items[customer,itemsold]<-Sales_Cust_Items[customer,itemsold]+1
 }
 
+#And we create a matrix that we will populate with the actual orders
+Orders_per_customer = matrix(0*1:(nbCustomers*nbOrders), ncol=nbOrders, nrow=nbCustomers)
+colnames(Orders_per_customer) <- Orders_list
+rownames(Orders_per_customer) <- Customer_list
+
+for (i in 1:nbTransactions){
+  order=as.character(Transaction_data[i,"Order.Number"])
+  customer=as.character(Transaction_data[i,"Anonym"])
+  Orders_per_customer[customer,order]<-Orders_per_customer[customer,order]+1
+}
+
 ```
 
 We have created a variable Sales_Cust_Items
@@ -184,14 +200,40 @@ We have created a variable Sales_Cust_Items
 #Basic data visualizations
 ##Distribution of the number of items ordered per customer
 
-```{r echo=FALSE, comment=NA, warning=FALSE, message=FALSE,results='asis',fig.align='center', fig=TRUE}
-Total_Sales_Cust = rowSums(Sales_Cust_Items[,2:ncol(Sales_Cust_Items)])
-ggplot(as.double(Total_Sales_Cust), aes(Total_Sales_Cust[,2]))
+```{r}
+# Plot of the distribution of number of items purchased on the whole period by each customer
+
+Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
+names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
+
+ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of items purchased")
+
+```
+
+
+```{r}
+# Plot of the distribution of number of items on the whole period by each customer
+
+Orders_per_customer = count(Transaction_data,"Anonym")
+
+ggplot(Orders_per_customer, aes(Orders_per_customer$freq)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+
 ```
 
 
 ##Distribution of number of orders per customer
-**To be completed**
+```{r}
+# Plot of the distribution of number of orders on the whole period by each customer
+
+Orders_per_customer[Orders_per_customer > 1] <- 1
+
+Ordered_by_customer = as.data.frame(apply(Orders_per_customer,1,sum))
+names(Ordered_by_customer)<-"Number_of_Orders"
+
+ggplot(Ordered_by_customer, aes(Ordered_by_customer$Number_of_Orders)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+
+```
+
 
 #Segmentation of the customers
 The goal of our analysis is to build an algorithm that would suggest other purchases to existing customers.
