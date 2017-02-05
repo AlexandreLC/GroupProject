@@ -88,7 +88,7 @@ First step is of course to import the data.
 Here swe have two data files:  
 
 * "Anonymized_transactions_all.csv" which compiles all transactions that happened between January 1st and February 7th. Each row of the file corresponds to the purchase of one item (when various items are bought during the same transaction, several lines are created). The different fields listed in the file are:
-  + Order numer: unique identification of the order
+  + Order number: unique identification of the order
   + SKU number: identifier of an item in the ecommerce database
   + Unit price of the item purchased
   + Price paid for the item (can be different from the item price if there are promotions for example)
@@ -204,9 +204,9 @@ We have created 2 variables: Sales_Cust_Items and Sales_Cust_Orders
 #Basic data visualizations
 ##Distribution of the number of items ordered per customer
 
-A total of `r nbItemsSold` items have been sold over the period
+A total of `r nbItemsSold` different items have been sold over the period (counting only once those who have been sold several times).
 
-```{r}
+```{r, echo=FALSE}
 # Plot of the distribution of number of items purchased on the whole period by each customer
 
 Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
@@ -217,7 +217,7 @@ ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purc
 ```
 
 
-```{r}
+```{r, echo=FALSE}
 # Plot of the distribution of number of items on the whole period by each customer
 
 Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
@@ -229,10 +229,12 @@ ggplot(Items_sold_per_customer2, aes(Items_sold_per_customer2$Freq)) + geom_hist
 
 ##Distribution of number of orders per customer
 
-A total of `r nbOrders` orders have been made over the period
-The majority of customers have only made 1 order
+A total of `r nbOrders` orders have been made over the period.
 
-```{r}
+
+The majority of customers have only made 1 order.
+
+```{r, echo=FALSE}
 # Plot of the distribution of number of orders on the whole period by each customer
 
 Sales_Cust_Orders[Sales_Cust_Orders > 1] <- 1
@@ -247,7 +249,7 @@ ggplot(Orders_per_customer, aes(Orders_per_customer$Number_of_Orders)) + geom_hi
 ##Top 10 customers (by number of items ordered)
 
 
-```{r}
+```{r, echo=FALSE}
 # Plot of the distribution of number of items on the whole period by the top 10 customers
 
 Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
@@ -263,7 +265,7 @@ Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits
 ##Top 10 SKUs (by number of items ordered)
 
 
-```{r}
+```{r, echo=FALSE}
 # Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
 
 Items_sold_per_customer3 = as.data.frame(table(Transaction_data$SKU))
@@ -279,7 +281,7 @@ ggplot(Top10_SKUs, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "iden
 Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
 
 
-#Segmentation of the customers
+#Determination of the most important factors
 The goal of our analysis is to build an algorithm that would suggest other purchases to existing customers.
 
 Our data goes from January 1st to February 7th. We will divide the dataset in two:
@@ -345,13 +347,9 @@ Matrix_segm[Customer_segm,Items_segm]<-Sales_Cust_Items[Customer_segm,Items_segm
 
 ##Data vizualization
 
-We can display data like:
-* Number of items sold per customer on average
-* Distribution of number of items sold
-* Amount spent per customer
-* ...
 
-```{r, echo=TRUE}
+
+```{r, echo=FALSE}
 # Plot of the distribution of number of items purchased on the whole period by each customer
 Items_sold_per_customer_category = as.data.frame(apply(Matrix_segm,1,sum))
 names(Items_sold_per_customer_category)<-"Number_of_Items_Purchased"
@@ -366,7 +364,7 @@ TO BE COMPLETED
 
 #Use of categories instead of item name
 
-To make our computatinos easier, we will associate each item to its category, thus drastically reducing the number of columns in the matrix.
+To make our computations easier, we can associate each item to its category, thus drastically reducing the number of columns in the matrix.
 
 ```{r}
 #Computing the correspondance matrix between SKU and Category.  
@@ -402,7 +400,7 @@ ggplot(Items_sold_per_category, aes(x=reorder(rownames(Items_sold_per_category),
 
 ##PCA analysis
 
-```{r}
+```{r, echo=FALSE}
 
 # Here is how the `principal` function is used 
 UnRotated_Results<-principal(Category_matrix, nfactors=ncol(Category_matrix), rotate="none",score=TRUE)
@@ -412,7 +410,7 @@ colnames(UnRotated_Factors)<-paste("Comp",1:ncol(UnRotated_Factors),sep="")
 
 ```
 
-```{r}
+```{r, echo=FALSE}
 # Here is how we use the `PCA` function 
 Variance_Explained_Table_results<-PCA(Category_matrix, graph=FALSE)
 Variance_Explained_Table<-Variance_Explained_Table_results$eig
@@ -428,13 +426,15 @@ Let's look at the **variance explained** as well as the **eigenvalues** :
 iprint.df(round(Variance_Explained_Table, 2))
 ```
 
-```{r}
+```{r, echo=FALSE}
 eigenvalues  <- Variance_Explained_Table[, "Eigenvalue"]
 df           <- cbind(as.data.frame(eigenvalues), c(1:length(eigenvalues)), rep(1, length(eigenvalues)))
 colnames(df) <- c("eigenvalues", "components", "abline")
 iplot.df(melt(df, id="components"))
 
 ```
+
+We think that we can be a bit more accurate than these results, so we'll try to do the same computations with the subcategories.
 
 
 #Use of Sub-categories
@@ -472,20 +472,24 @@ for (i in 1:nrow(Transaction_data)) {
 ```
 
 ```{r}
-# Plot of the distribution of number of items purchased on the whole period by each customer
+# Plot of the distribution of number of items purchased on the whole period by subcategory
 Items_sold_per_subcategory = as.data.frame(apply(SubCategory_matrix,2,sum))
 names(Items_sold_per_subcategory)<-"Number_of_Items_Purchased_Per_SubCat"
+t <- cbind(SubCategory_list, Items_sold_per_subcategory)
+s <- t[order(-t$Number_of_Items_Purchased_Per_SubCat),]
 
-ggplot(x=rownames(Items_sold_per_subcategory),
-      y= apply(SubCategory_matrix,2,sum), 
-      geom="hist") 
+Top15_subcat <- s[1:15,]
+rownames(Top15_subcat) <- c(1:15)
+
+ggplot(Top15_subcat, aes(x = reorder(SubCategory_list,-Number_of_Items_Purchased_Per_SubCat), y=Number_of_Items_Purchased_Per_SubCat)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 15 Subcategories", y = "Number of items ordered")
 
 ```
+
+Top 15 subcategories account for `r round(sum(Top15_subcat[,2])/sum(Items_sold_per_subcategory)*100, digits = 2)`% of sales in volume
 
 ##PCA analysis
 
 ```{r}
-
 # Here is how the `principal` function is used 
 UnRotated_Results<-principal(SubCategory_matrix, nfactors=ncol(SubCategory_matrix), rotate="none",score=TRUE)
 UnRotated_Factors<-round(UnRotated_Results$loadings,2)
@@ -517,10 +521,98 @@ colnames(df) <- c("eigenvalues", "components", "abline")
 iplot.df(melt(df, id="components"))
 ```
 
+### Interpret the factors
+
+Loking at the graph and table above, we chose to take the top 40 factors, to explain at least 50% of the variance. 
+
+```{r, echo = FALSE}
+factors_selected = 40
+```
+
+To better visualise them, we will use the "varimax" rotation. For our data, the `r factors_selected` selected factors look as follows after this rotation: 
+
+```{r, echo = FALSE}
+Rotated_Results<-principal(SubCategory_matrix, nfactors=max(factors_selected), rotate="varimax",score=TRUE)
+Rotated_Factors<-round(Rotated_Results$loadings,2)
+Rotated_Factors<-as.data.frame(unclass(Rotated_Factors))
+colnames(Rotated_Factors)<-paste("Comp.",1:ncol(Rotated_Factors),sep="")
+
+sorted_rows <- sort(Rotated_Factors[,1], decreasing = TRUE, index.return = TRUE)$ix
+Rotated_Factors <- Rotated_Factors[sorted_rows,]
+
+iprint.df(Rotated_Factors, scale=TRUE)
+```
+
+To better visualize and interpret the factors we will "supress" loadings with small values. However, as the data is much less clean than in other examples, we will keep it with absolute values higher than 0.2. In this case our factors look as follows after suppressing the small numbers:
+
+```{r, echo=FALSE}
+Rotated_Factors_thres <- Rotated_Factors
+Rotated_Factors_thres[abs(Rotated_Factors_thres) < 0.2]<-NA
+colnames(Rotated_Factors_thres)<- colnames(Rotated_Factors)
+rownames(Rotated_Factors_thres)<- rownames(Rotated_Factors)
+
+iprint.df(Rotated_Factors_thres, scale=TRUE)
+```
+
+# Customer clustering
+
+From the Factor Analysis performed above, we have extracted the 40 most important factors. For the sake of simplicity, each factor will be represented buy the subcategory the most important.
+
+```{r, echo=FALSE}
+#Constructing the Factors retained
+FactorName=NULL
+for (i in 1:ncol(Rotated_Factors)){
+  rowIndex=which(Rotated_Factors[,i]==max(Rotated_Factors[,i]))[1]
+  FactorName=c(FactorName,rownames(Rotated_Factors[rowIndex,]))
+}
+
+Matrix_cluster=SubCategory_matrix[,FactorName]
+
+```
+
+We'll use the Kmeans method to cluster our customers.
+
+```{r setupcluster, echo=FALSE, tidy=TRUE}
+
+# Please ENTER the number of clusters to eventually use for this report
+numb_clusters_used = 7 # for boats possibly use 5, for Mall_Visits use 3
+
+# Please enter the method to use for the segmentation:
+profile_with = "kmeans" #  "hclust" or "kmeans"
+
+# Please ENTER the distance metric eventually used for the clustering in case of hierarchical clustering 
+# (e.g. "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski" - see help(dist)). 
+# DEFAULT is "euclidean"
+distance_used = "euclidean"
+
+# Please ENTER the hierarchical clustering method to use (options are:
+# "ward", "single", "complete", "average", "mcquitty", "median" or "centroid").
+# DEFAULT is "ward"
+hclust_method = "ward.D"
+
+# Please ENTER the kmeans clustering method to use (options are:
+# "Hartigan-Wong", "Lloyd", "Forgy", "MacQueen").
+# DEFAULT is "Lloyd"
+kmeans_method = "Lloyd"
+
+```
+
+```{r setupcluster2, echo=FALSE, tidy=TRUE}
+
+# Same as the initial data
+ProjectData <- Matrix_cluster
+
+segmentation_attributes_used <- intersect(segmentation_attributes_used, 1:ncol(ProjectData))
+profile_attributes_used <- intersect(profile_attributes_used, 1:ncol(ProjectData))
+
+ProjectData_segment <- ProjectData[,segmentation_attributes_used]
+ProjectData_profile <- ProjectData[,profile_attributes_used]
+
+ProjectData_scaled <- apply(ProjectData, 2, function(r) if (sd(r)!=0) (r-mean(r))/sd(r) else 0*r)
+```
 
 
+# Customer prediction
 The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
 
-----------
- CODE TO BE INSERTED here
--------------
+
