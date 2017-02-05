@@ -246,7 +246,6 @@ ggplot(Orders_per_customer, aes(Orders_per_customer$Number_of_Orders)) + geom_hi
 
 ##Top 10 customers (by number of items ordered)
 
-Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period 
 
 ```{r}
 # Plot of the distribution of number of items on the whole period by the top 10 customers
@@ -259,9 +258,10 @@ ggplot(Top10_customers, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = 
 
 ```
 
+Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period 
+
 ##Top 10 SKUs (by number of items ordered)
 
-Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
 
 ```{r}
 # Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
@@ -274,6 +274,9 @@ ggplot(Top10_SKUs, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "iden
 
 
 ```
+
+
+Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
 
 
 #Segmentation of the customers
