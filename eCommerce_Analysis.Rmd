@@ -9,9 +9,6 @@ output:
     toc_float:
       collapsed: no
       smooth_scroll: yes
-  pdf_document:
-    includes:
-      in_header: ./AnalyticsStyles/default.sty
 always_allow_html: yes
 ---
 
@@ -35,7 +32,6 @@ getDocumentOutputFormat <- function() {
 # Format tables for html/latex output
 normalize.abs <- function(x, min=0, max=1, na.rm=FALSE) normalize(abs(x), min, max, na.rm)
 iprint.df <- function(df, scale=FALSE) {
-  if (getDocumentOutputFormat() == "html") {
     if (class(df) != "data.frame")
       df <- as.data.frame(df)
     x <- lapply(colnames(df), function(col) {
@@ -46,18 +42,10 @@ iprint.df <- function(df, scale=FALSE) {
     })
     names(x) <- colnames(df)
     tags$div(class="formattable_container", HTML(gsub("NA", "", format_table(df, x))))
-  } else if (opts_knit$get('rmarkdown.pandoc.to') == "latex") {
-    cat(ifelse(scale, "\\setkeys{Gin}{height=\\textheight}\\adjustbox{width=\\linewidth}{", "\\begin{center}"))
-    cat(kable(df, format="latex", booktabs=TRUE, longtable=!scale))
-    cat(ifelse(scale, "}\\setkeys{Gin}{height=\\maxheight}", "\\end{center}"))
-  } else {
-    kable(df)
-  }
-}
+  } 
 
 # Format plots for html/latex output
 iplot.df <- function(df, x=colnames(df)[1], y="value", v="variable", type="line", xlab=NULL, ylab=NULL) {
-  if (getDocumentOutputFormat() == "html") {
     p <- c3(df, x=x, y=y, group=v, width="100%", height="480px")
     p <- switch(type,
       line = p %>% c3_line('spline'),
@@ -66,17 +54,7 @@ iplot.df <- function(df, x=colnames(df)[1], y="value", v="variable", type="line"
     if (!is.null(xlab)) p <- p %>% xAxis(label=xlab)
     if (!is.null(ylab)) p <- p %>% yAxis(label=ylab)
     p
-  } else {  # latex, etc.
-    p <- ggplot(df, aes_string(x=x, y=y, colour=v))
-    p <- switch(type,
-      line = p + geom_line(),
-      bar  = p + geom_bar(stat="identity")
-    )
-    if (!is.null(xlab)) p <- p + labs(x=xlab)
-    if (!is.null(ylab)) p <- p + labs(y=ylab)
-    p
   }
-}
 
 iplot.hist <- function(x, breaks="Sturges", xlab=NULL) {
   h <- hist(x, breaks=breaks, plot=FALSE)
@@ -99,8 +77,7 @@ iplot.dendrogram <- function(cluster) {
   }
 }
 
-#launch library plyr
-library(plyr)
+
 ```
 
 We have gathered data from Ecommerce website sales for 3 days. The goal of our analysis is to segment our customers 
@@ -109,7 +86,7 @@ We have gathered data from Ecommerce website sales for 3 days. The goal of our a
 
 First step is of course to import the data.
 
-Here swe have two data files: 
+Here swe have two data files:  
 
 * "Anonymized_transactions_all.csv" which compiles all transactions that happened between January 1st and February 7th. Each row of the file corresponds to the purchase of one item (when various items are bought during the same transaction, several lines are created). The different fields listed in the file are:
   + Order numer: unique identification of the order
@@ -175,7 +152,7 @@ nbTransactions=nrow(Transaction_data)
 
 ```
 
-After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer.
+After having imported the data, the idea is to create a new variable, that sums up the items bought by each customer. 
 
 ```{r, echo=TRUE, tidy=TRUE}
 #We have to figure out at first the list of customers and of items sold
@@ -236,17 +213,7 @@ A total of `r nbItemsSold` items have been sold over the period
 Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
 names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
 
-ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of items purchased")
-
-```
-
-
-```{r}
-# Plot of the distribution of number of items on the whole period by each customer
-
-Items_sold_per_customer2 = count(Transaction_data,"Anonym")
-
-ggplot(Items_sold_per_customer2, aes(Items_sold_per_customer2$freq)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders",y = "Number of items purchased")
 
 ```
 
@@ -275,7 +242,7 @@ Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits
 ```{r}
 # Plot of the distribution of number of items on the whole period by the top 10 customers
 
-Items_sold_per_customer2 = count(Transaction_data,"Anonym")
+Items_sold_per_customer2 = table(Transaction_data$Anonym)
 Customers_sorted <- Items_sold_per_customer2[order(Items_sold_per_customer2[,2], decreasing=TRUE),]
 Top10_customers <- Customers_sorted[1:10,]
 rownames(Top10_customers) <- c(1:10)
@@ -291,22 +258,7 @@ Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`%
 ```{r}
 # Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
 
-Items_sold_per_customer3 = count(Transaction_data,"SKU")
-SKUs_sorted <- Items_sold_per_customer3[order(Items_sold_per_customer3[,2], decreasing=TRUE),]
-Top10_SKUs <- SKUs_sorted[1:10,]
-rownames(Top10_SKUs) <- c(1:10)
-ggplot(Top10_SKUs, aes(x = reorder(SKU,-freq), y=freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 SKUs", y = "Number of items ordered")
-
-```
-
-##Top 3 categories (by number of items ordered)
-
-Top 3 categories represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
-
-```{r}
-# Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
-
-Items_sold_per_customer3 = count(Transaction_data,"SKU")
+Items_sold_per_customer3 = table(Transaction_data$SKU)
 SKUs_sorted <- Items_sold_per_customer3[order(Items_sold_per_customer3[,2], decreasing=TRUE),]
 Top10_SKUs <- SKUs_sorted[1:10,]
 rownames(Top10_SKUs) <- c(1:10)
@@ -392,10 +344,7 @@ We can display data like:
 Items_sold_per_customer_category = as.data.frame(apply(Matrix_segm,1,sum))
 names(Items_sold_per_customer_category)<-"Number_of_Items_Purchased"
 
-qplot(Number_of_Items_Purchased, 
-      data=Items_sold_per_customer_category, 
-      geom="histogram",
-      binwidth=1) + scale_x_continuous(limits = c(0, 15))
+ggplot(Items_sold_per_customer_category, aes(Items_sold_per_customer_category$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
 
 ```
 
@@ -435,9 +384,7 @@ for (i in 1:nrow(Transaction_data)) {
 Items_sold_per_category = as.data.frame(apply(Category_matrix,2,sum))
 names(Items_sold_per_category)<-"Number_of_Items_Purchased_Per_Cat"
 
-ggplot(x=rownames(Items_sold_per_category),
-      y= apply(Category_matrix,2,sum), 
-      geom="hist") 
+ggplot(Items_sold_per_category, aes(x=reorder(rownames(Items_sold_per_category),-apply(Category_matrix,2,sum)),y=apply(Category_matrix,2,sum))) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Categories", y = "Number of items ordered")
 
 ```
 
