@@ -127,7 +127,7 @@ Here swe have two data files:
   + Item description: a sentence describing the item
   + Category of the item
   + Sub-category of the item
-  + Sub-sub-category of the item
+  + Sub-sub-category of the item 
 
 ```{r, echo=FALSE, tidy=TRUE}
 # Please ENTER the name of the files with the data used. 
