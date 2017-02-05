@@ -1,6 +1,6 @@
 ---
 title: "Analyzing eCommerce data"
-author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann"
+author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann" 
 output:
   html_document:
     css: ./AnalyticsStyles/default.css
