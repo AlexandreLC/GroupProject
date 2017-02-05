@@ -623,6 +623,9 @@ We will visualise now the distance with respect to the number of clusters to be 
 
 
 ```{r, echo = FALSE}
+Hierarchical_Cluster_distances <- dist(ProjectData_segment, method=distance_used)
+Hierarchical_Cluster <- hclust(Hierarchical_Cluster_distances, method=hclust_method)
+
 num <- nrow(ProjectData) - 1
 df1 <- cbind(as.data.frame(Hierarchical_Cluster$height[length(Hierarchical_Cluster$height):1]), c(1:num))
 colnames(df1) <- c("distances","index")
@@ -701,7 +704,7 @@ ggplot(as.data.frame(ProjectData_with_kmeans_membership), aes(as.data.frame(Proj
 
 ```
 
-The result here is widely differentm with a cluster 5 that has much more customers than the other ones. Let's visualize the attributes of the clusters.
+The result here is widely differentm with a cluster 5 that has much more customers than the other ones. Let's visualize the attributes of the clusters by computing the purchases of the "mean customer" for each cluster.
 
 ```{r, echo=FALSE}
 #
@@ -712,9 +715,21 @@ rownames(Cluster_matrix)<-1:Nb_Clusters
 
 for (i in 1:Nb_Clusters){
   Segment = ProjectData_with_kmeans_membership[ProjectData_with_kmeans_membership[,2]==i,1]
-  Cluster_matrix[i,]=as.matrix(apply(ProjectData_segment[Segment,],2,mean), nrow=1, ncol=length(FactorName))
+  if (length(Segment>1)){
+    Cluster_matrix[i,]=as.matrix(apply(ProjectData_segment[Segment,],2,mean), nrow=1, ncol=length(FactorName))
+  }
+  else{Cluster_matrix[i,]=ProjectData_segment[Segment,]}
 }
 
 iprint.df(Cluster_matrix)
 
 ```
+
+#Customer behavior prediction
+
+We weren't able to go farther on customer beghavior prediction.
+
+The next steps would have been:
+1.  Compute the distances between the customers who have purchased items in January and February and each cluster, based on their purchases in January. 
+2.  Use it to assign them to a particular cluster.
+3.  Use the informations of each cluster to see wht each customer might need and therefore might order next.
