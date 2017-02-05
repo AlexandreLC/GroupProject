@@ -1,6 +1,6 @@
 ---
 title: "Analyzing eCommerce data"
-author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann"
+author: "Tommy Wang, Sadaf Sultan, Jean-Francois Lafon, Alexandre Le Cann" 
 output:
   html_document:
     css: ./AnalyticsStyles/default.css
@@ -99,8 +99,8 @@ iplot.dendrogram <- function(cluster) {
   }
 }
 
-#launch library dplyr
-library(dplyr)
+#launch library plyr
+library(plyr)
 ```
 
 We have gathered data from Ecommerce website sales for 3 days. The goal of our analysis is to segment our customers 
@@ -270,7 +270,7 @@ ggplot(Orders_per_customer, aes(Orders_per_customer$Number_of_Orders)) + geom_hi
 
 ##Top 10 customers (by number of items ordered)
 
-Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
+Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period 
 
 ```{r}
 # Plot of the distribution of number of items on the whole period by the top 10 customers
