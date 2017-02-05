@@ -77,7 +77,6 @@ iplot.dendrogram <- function(cluster) {
   }
 }
 
-
 ```
 
 We have gathered data from Ecommerce website sales for 3 days. The goal of our analysis is to segment our customers 
@@ -218,6 +217,16 @@ ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purc
 ```
 
 
+```{r}
+# Plot of the distribution of number of items on the whole period by each customer
+
+Items_sold_per_customer2 = table(Transaction_data$Anonym)
+
+ggplot(Items_sold_per_customer2, aes(Items_sold_per_customer2$freq)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+
+```
+
+
 ##Distribution of number of orders per customer
 
 A total of `r nbOrders` orders have been made over the period
@@ -248,7 +257,6 @@ Top10_customers <- Customers_sorted[1:10,]
 rownames(Top10_customers) <- c(1:10)
 ggplot(Top10_customers, aes(x = reorder(Anonym,-freq), y=freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 customers", y = "Number of items ordered")
 
-
 ```
 
 ##Top 10 SKUs (by number of items ordered)
@@ -263,6 +271,7 @@ SKUs_sorted <- Items_sold_per_customer3[order(Items_sold_per_customer3[,2], decr
 Top10_SKUs <- SKUs_sorted[1:10,]
 rownames(Top10_SKUs) <- c(1:10)
 ggplot(Top10_SKUs, aes(x = reorder(SKU,-freq), y=freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 SKUs", y = "Number of items ordered")
+
 
 ```
 
