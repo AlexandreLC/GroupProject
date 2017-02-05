@@ -104,7 +104,6 @@ Here swe have two data files:
   + Category of the item
   + Sub-category of the item
   + Sub-sub-category of the item 
-
 ```{r, echo=FALSE, tidy=TRUE}
 # Please ENTER the name of the files with the data used. 
 Transaction_datafile_name = "Anonymized_transactions_all.csv"
@@ -566,8 +565,6 @@ for (i in 1:ncol(Rotated_Factors)){
   FactorName=c(FactorName,rownames(Rotated_Factors[rowIndex,]))
 }
 
-Matrix_cluster=SubCategory_matrix[,FactorName]
-
 ```
 
 We'll use the Kmeans method to cluster our customers.
@@ -575,7 +572,7 @@ We'll use the Kmeans method to cluster our customers.
 ```{r setupcluster, echo=FALSE, tidy=TRUE}
 
 # Please ENTER the number of clusters to eventually use for this report
-numb_clusters_used = 7 # for boats possibly use 5, for Mall_Visits use 3
+numb_clusters_used = 10 # for boats possibly use 5, for Mall_Visits use 3
 
 # Please enter the method to use for the segmentation:
 profile_with = "kmeans" #  "hclust" or "kmeans"
@@ -600,19 +597,124 @@ kmeans_method = "Lloyd"
 ```{r setupcluster2, echo=FALSE, tidy=TRUE}
 
 # Same as the initial data
-ProjectData <- Matrix_cluster
+ProjectData <- SubCategory_matrix
 
-segmentation_attributes_used <- intersect(segmentation_attributes_used, 1:ncol(ProjectData))
-profile_attributes_used <- intersect(profile_attributes_used, 1:ncol(ProjectData))
+segmentation_attributes_used <- FactorName
+profile_attributes_used <- 1:ncol(ProjectData)
 
 ProjectData_segment <- ProjectData[,segmentation_attributes_used]
 ProjectData_profile <- ProjectData[,profile_attributes_used]
 
-ProjectData_scaled <- apply(ProjectData, 2, function(r) if (sd(r)!=0) (r-mean(r))/sd(r) else 0*r)
+
 ```
 
+The histogram of all pairwise distances for the `r distance_used` distance:
 
-# Customer prediction
-The goal of this section is to test if the segmentation of the second dataset is able to predict the purchases from the first dataset.
+```{r}
+Pairwise_Distances <- dist(ProjectData_segment, method = distance_used) 
+qplot(as.vector(Pairwise_Distances), xlab="Histogram of all pairwise Distances between observtions", ylab="Frequency", binwidth=1)
+```
+
+###Hierarchial Clustering
+
+Let's fist use the **Hierarchial Clustering** method, as we do not know for now how many segments there are in our data.It should produce a Dendrogram, but here the data seems to be too massive to be represented in such a format...
+
+We will visualise now the distance with respect to the number of clusters to be able to choose the appropriate number of clusters.
 
 
+```{r, echo = FALSE}
+num <- nrow(ProjectData) - 1
+df1 <- cbind(as.data.frame(Hierarchical_Cluster$height[length(Hierarchical_Cluster$height):1]), c(1:num))
+colnames(df1) <- c("distances","index")
+ggplot(df1, aes(x=index, y=distances)) + geom_line() + xlab("Number of Components") +ylab("Distances")
+```
+
+Let's zoom in to see the elbow of the plot..
+
+```{r, echo = FALSE}
+ggplot(df1[1:50,], aes(x=index[1:50], y=distances[1:50])) + geom_line() + xlab("Number of Components") +ylab("Distances")
+```
+
+As a rule of thumb, one can select the number of clusters as the "elbow" of this plot: this is the place in the tree where, if we traverse the tree from the leaves to its root, we need to make the "longest jump" before we merge further the segments at that tree level. 
+
+For now let's consider the `r numb_clusters_used`-segments solution found by the Hierarchical Clustering method (using the `r distance_used` distance and the hclust option `r hclust_method`). We can also see the segment each observation (respondent in this case) belongs to for the first `r min(max_data_report,nrow(ProjectData))` people:
+
+```{r}
+Nb_Clusters=10
+cluster_memberships_hclust <- as.vector(cutree(Hierarchical_Cluster, k=numb_clusters_used)) 
+cluster_ids_hclust=unique(cluster_memberships_hclust)
+
+ProjectData_with_hclust_membership <- cbind(1:length(cluster_memberships_hclust),cluster_memberships_hclust)
+colnames(ProjectData_with_hclust_membership)<-c("Observation Number","Cluster_Membership")
+
+knitr::kable(round(head(ProjectData_with_hclust_membership, max_data_report), 2))
+```
+
+Let's now try to observe these clusters. At first tlet's visualize how many customers are in each cluster. 
+```{r, echo=FALSE}
+# Plot of the distribution of number of customers per cluster
+
+ggplot(as.data.frame(ProjectData_with_hclust_membership), aes(as.data.frame(ProjectData_with_hclust_membership)$Cluster_Membership)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,11), limits = c(0, 11)) + labs(x = "Number of orders")
+
+```
+
+The Cluster number 2 seems to be the one with the most of customers.
+
+Let's try to visualize the definition of each cluster.
+
+```{r, echo=FALSE}
+#
+Cluster_matrix=matrix(0*1:Nb_Clusters*length(FactorName), nrow=Nb_Clusters, ncol=length(FactorName))
+colnames(Cluster_matrix)<-FactorName
+rownames(Cluster_matrix)<-1:Nb_Clusters
+
+
+for (i in 1:Nb_Clusters){
+  Segment = ProjectData_with_hclust_membership[ProjectData_with_hclust_membership[,2]==i,1]
+  Cluster_matrix[i,]=as.matrix(apply(ProjectData_segment[Segment,],2,mean), nrow=1, ncol=length(FactorName))
+}
+
+iprint.df(Cluster_matrix)
+
+```
+
+**Using Kmean Clustering**
+
+
+Here are the clusters our observations belong to when we select `r numb_clusters_used` clusters and the `r kmeans_method` kmeans method, for the first `r min(max_data_report,nrow(ProjectData))` people (note that the cluster IDs may differ from those from hierarchical clustering):
+
+```{r}
+kmeans_clusters <- kmeans(ProjectData_segment,centers= numb_clusters_used, iter.max=2000, algorithm=kmeans_method)
+
+ProjectData_with_kmeans_membership <- cbind(1:length(kmeans_clusters$cluster),kmeans_clusters$cluster)
+colnames(ProjectData_with_kmeans_membership)<-c("Observation Number","Cluster_Membership")
+
+knitr::kable(round(head(ProjectData_with_kmeans_membership, max_data_report), 2))
+```
+
+Let's visualize the data, just like for the previous method.
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of customers per cluster
+
+ggplot(as.data.frame(ProjectData_with_kmeans_membership), aes(as.data.frame(ProjectData_with_kmeans_membership)$Cluster_Membership)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,11), limits = c(0, 11)) + labs(x = "Number of orders")
+
+```
+
+The result here is widely differentm with a cluster 5 that has much more customers than the other ones. Let's visualize the attributes of the clusters.
+
+```{r, echo=FALSE}
+#
+Cluster_matrix=matrix(0*1:Nb_Clusters*length(FactorName), nrow=Nb_Clusters, ncol=length(FactorName))
+colnames(Cluster_matrix)<-FactorName
+rownames(Cluster_matrix)<-1:Nb_Clusters
+
+
+for (i in 1:Nb_Clusters){
+  Segment = ProjectData_with_kmeans_membership[ProjectData_with_kmeans_membership[,2]==i,1]
+  Cluster_matrix[i,]=as.matrix(apply(ProjectData_segment[Segment,],2,mean), nrow=1, ncol=length(FactorName))
+}
+
+iprint.df(Cluster_matrix)
+
+```
