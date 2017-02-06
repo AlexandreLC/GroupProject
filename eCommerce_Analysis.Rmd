@@ -79,31 +79,36 @@ iplot.dendrogram <- function(cluster) {
 
 ```
 
-We have gathered data from Ecommerce website sales for 3 days. The goal of our analysis is to segment our customers 
+Our data is gathered from the eCommerce site Lazada and reflects 3 days of sales data per customer who bought on the website. More specifically, the data shows what specifically the customers have bought as well as the quantity they have puchased. 
+
+Our goal in this exercise is to find a way to analyze the data so that we can investigate what products we might be able to recommend to a customer when they have already place a product on the basket. This analysis can help us increase sales in the website by driving up purchase volume through the implementation of an effective recommendation engine. 
 
 #Importing the data
 
-First step is of course to import the data.
+Our first step was to clean the data and pick the appropriate subset which will help us run a relevant analysis. Because we want to make recommendations based on what a customer has already bought, the most relevant data for us would be customers who have bought at least two or more products on the website. 
 
-Here swe have two data files:  
+We start with the following two data files which are described below: 
 
 * "Anonymized_transactions_all.csv" which compiles all transactions that happened between January 1st and February 7th. Each row of the file corresponds to the purchase of one item (when various items are bought during the same transaction, several lines are created). The different fields listed in the file are:
-  + Order number: unique identification of the order
-  + SKU number: identifier of an item in the ecommerce database
-  + Unit price of the item purchased
-  + Price paid for the item (can be different from the item price if there are promotions for example)
-  + Date of the order
-  + Time of the order
-  + Payment method used
-  + Price paid for the whole order
-  + Anonymized name of the customer ("Anonym"+several digits)
+    + Order number: unique identification of the order
+    + SKU number: identifier of an item in the ecommerce database
+    + Unit price of the item purchased
+    + Price paid for the item (can be different from the item price if there are promotions for example)
+    + Date of the order
+    + Time of the order
+    + Payment method used
+    + Price paid for the whole order
+    + Anonymized name of the customer ("Anonym"+several digits)
   
 * "Categories_all.csv" contains a breakdown of each item into sub categories. Each line corresponds to an item that can be purchased through the ecommerce website. The different fields are:
-  + SKU number: the unique identifier for each item
-  + Item description: a sentence describing the item
-  + Category of the item
-  + Sub-category of the item
-  + Sub-sub-category of the item 
+    + SKU number: the unique identifier for each item
+    + Item description: a sentence describing the item
+    + Category of the item
+    + Sub-category of the item
+    + Sub-sub-category of the item 
+  
+Upon importing the data, we clean and adjust the data so that we have the appropriate subset. 
+
 ```{r, echo=FALSE, tidy=TRUE}
 # Please ENTER the name of the files with the data used. 
 Transaction_datafile_name = "Anonymized_transactions_all.csv"
@@ -200,94 +205,14 @@ for (i in 1:nbTransactions){
 
 We have created 2 variables: Sales_Cust_Items and Sales_Cust_Orders
 
-#Basic data visualizations
-##Distribution of the number of items ordered per customer
 
-A total of `r nbItemsSold` different items have been sold over the period (counting only once those who have been sold several times).
-
-```{r, echo=FALSE}
-# Plot of the distribution of number of items purchased on the whole period by each customer
-
-Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
-names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
-
-ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders",y = "Number of items purchased")
-
-```
-
-
-```{r, echo=FALSE}
-# Plot of the distribution of number of items on the whole period by each customer
-
-Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
-
-ggplot(Items_sold_per_customer2, aes(Items_sold_per_customer2$Freq)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
-
-```
-
-
-##Distribution of number of orders per customer
-
-A total of `r nbOrders` orders have been made over the period.
-
-
-The majority of customers have only made 1 order.
-
-```{r, echo=FALSE}
-# Plot of the distribution of number of orders on the whole period by each customer
-
-Sales_Cust_Orders[Sales_Cust_Orders > 1] <- 1
-
-Orders_per_customer = as.data.frame(apply(Sales_Cust_Orders,1,sum))
-names(Orders_per_customer)<-"Number_of_Orders"
-
-ggplot(Orders_per_customer, aes(Orders_per_customer$Number_of_Orders)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
-
-```
-
-##Top 10 customers (by number of items ordered)
-
-
-```{r, echo=FALSE}
-# Plot of the distribution of number of items on the whole period by the top 10 customers
-
-Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
-Customers_sorted <- Items_sold_per_customer2[order(Items_sold_per_customer2[,2], decreasing=TRUE),]
-Top10_customers <- Customers_sorted[1:10,]
-rownames(Top10_customers) <- c(1:10)
-ggplot(Top10_customers, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 customers", y = "Number of items ordered")
-
-```
-
-Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period 
-
-##Top 10 SKUs (by number of items ordered)
-
-
-```{r, echo=FALSE}
-# Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
-
-Items_sold_per_customer3 = as.data.frame(table(Transaction_data$SKU))
-SKUs_sorted <- Items_sold_per_customer3[order(Items_sold_per_customer3[,2], decreasing=TRUE),]
-Top10_SKUs <- SKUs_sorted[1:10,]
-rownames(Top10_SKUs) <- c(1:10)
-ggplot(Top10_SKUs, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 SKUs", y = "Number of items ordered")
-
-
-```
-
-
-Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
-
-
-#Determination of the most important factors
 The goal of our analysis is to build an algorithm that would suggest other purchases to existing customers.
 
 Our data goes from January 1st to February 7th. We will divide the dataset in two:
 * First dataset regroups people who bought items in January and in February
 * Second dataset regroups people who ordered more than one items during January, excluding the customers who are already in the first dataset.
 
-We will use the second dataset to buid a segmentation of the customer based on the items they bought, and then use the second dataset to check if the segmentation is accurate enough to be predicitve: we will assign the customers from the first dataset in segments based on their purchases in January, and try then to anticipate their purchases in February.
+We will use the second dataset to buid a segmentation of the customer based on the items they bought, and then use the second dataset to check if the segmentation is accurate enough to be predictive: we will assign the customers from the first dataset in segments based on their purchases in January, and try then to anticipate their purchases in February.
 
 ```{r, echo=FALSE}
 
@@ -344,9 +269,11 @@ Matrix_segm[Customer_segm,Items_segm]<-Sales_Cust_Items[Customer_segm,Items_segm
 
 ```
 
-##Data vizualization
+# Basic Data vizualization
 
+We try to visualize the data for the second dataset: that is, people who have bought more than one product per purchase. 
 
+##Distribution of number of orders per customer (more than 2 per customer)
 
 ```{r, echo=FALSE}
 # Plot of the distribution of number of items purchased on the whole period by each customer
@@ -357,11 +284,83 @@ ggplot(Items_sold_per_customer_category, aes(Items_sold_per_customer_category$Nu
 
 ```
 
-##Analysis of the results
+We go back and try to compare this with the original data. 
 
-TO BE COMPLETED
+##Distribution of number of orders per customer (1 or more per customer)
 
-#Use of categories instead of item name
+If we also see the frequncy distribution for the number of orders in the original data, we see that `r nbOrders` orders have been made over the period. The majority of customers have only made 1 order. However, the subset of customers who have ordered more than 2 is still large enough to give us some reasonable results. 
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of orders on the whole period by each customer
+
+Sales_Cust_Orders[Sales_Cust_Orders > 1] <- 1
+
+Orders_per_customer = as.data.frame(apply(Sales_Cust_Orders,1,sum))
+names(Orders_per_customer)<-"Number_of_Orders"
+
+ggplot(Orders_per_customer, aes(Orders_per_customer$Number_of_Orders)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+
+```
+
+
+A total of `r nbItemsSold` unique items had been sold in the last period.
+
+##Distribution of items per customer
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of items purchased on the whole period by each customer
+
+Items_sold_per_customer = as.data.frame(apply(Sales_Cust_Items,1,sum))
+names(Items_sold_per_customer)<-"Number_of_Items_Purchased"
+
+ggplot(Items_sold_per_customer, aes(Items_sold_per_customer$Number_of_Items_Purchased)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders",y = "Number of items purchased")
+
+```
+
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of items on the whole period by each customer
+
+Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
+
+ggplot(Items_sold_per_customer2, aes(Items_sold_per_customer2$Freq)) + geom_histogram(fill = '#B8274C', binwidth = 0.5) + scale_x_continuous(breaks = seq(0,15), limits = c(0, 15)) + labs(x = "Number of orders")
+
+```
+
+##Top 10 customers (by number of items ordered)
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of items on the whole period by the top 10 customers
+
+Items_sold_per_customer2 = as.data.frame(table(Transaction_data$Anonym))
+Customers_sorted <- Items_sold_per_customer2[order(Items_sold_per_customer2[,2], decreasing=TRUE),]
+Top10_customers <- Customers_sorted[1:10,]
+rownames(Top10_customers) <- c(1:10)
+ggplot(Top10_customers, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 customers", y = "Number of items ordered")
+
+```
+
+Top 10 customers bought `r round(sum(Top10_customers[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period 
+
+##Top 10 SKUs (by number of items ordered)
+
+
+```{r, echo=FALSE}
+# Plot of the distribution of number of items sold on the whole period for the Top 10 bestsellers
+
+Items_sold_per_customer3 = as.data.frame(table(Transaction_data$SKU))
+SKUs_sorted <- Items_sold_per_customer3[order(Items_sold_per_customer3[,2], decreasing=TRUE),]
+Top10_SKUs <- SKUs_sorted[1:10,]
+rownames(Top10_SKUs) <- c(1:10)
+ggplot(Top10_SKUs, aes(x = reorder(Var1,-Freq), y=Freq)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = "Top 10 SKUs", y = "Number of items ordered")
+
+
+```
+
+
+Top 10 SKUs represent `r round(sum(Top10_SKUs[,2])/nbItemsSold*100,digits = 2)`% of all items sold over the period
+
+#Principal Component Analysis
 
 To make our computations easier, we can associate each item to its category, thus drastically reducing the number of columns in the matrix.
 
@@ -397,7 +396,9 @@ ggplot(Items_sold_per_category, aes(x=reorder(rownames(Items_sold_per_category),
 
 ```
 
-##PCA analysis
+##Factor analysis
+
+However, since we still have a number of categories in our data, we can use factor or principal component analysis to compress the number of categories without losing any of the valuable information. 
 
 ```{r, echo=FALSE}
 
@@ -419,11 +420,13 @@ rownames(Variance_Explained_Table) <- paste("Component", 1:nrow(Variance_Explain
 colnames(Variance_Explained_Table) <- c("Eigenvalue", "Pct of explained variance", "Cumulative pct of explained variance")
 ```
 
-Let's look at the **variance explained** as well as the **eigenvalues** :
+Let's look at the **variance explained** as well as the **eigenvalues** of our factors:
 
 ```{r}
 iprint.df(round(Variance_Explained_Table, 2))
 ```
+
+Here is the skree plot as well for the components. 
 
 ```{r, echo=FALSE}
 eigenvalues  <- Variance_Explained_Table[, "Eigenvalue"]
@@ -433,16 +436,13 @@ iplot.df(melt(df, id="components"))
 
 ```
 
-We think that we can be a bit more accurate than these results, so we'll try to do the same computations with the subcategories.
+We think that we can be a bit more accurate than these results, so we'll try to do the same computation with the subcategories.
 
-
-#Use of Sub-categories
+##Use of Sub-categories
 
 Not every item has a sub_category in the file "Categories_all.csv", so we will define the subcategory as the concatenation of the Category and the Subcategory found in the datafile.
 
 It means that if an item doesn't have a subcategory, it will be referenced by its category.
-
-
 
 ```{r}
 #Computing the correspondance matrix between SKU and Sub-Category.  
@@ -486,7 +486,7 @@ ggplot(Top15_subcat, aes(x = reorder(SubCategory_list,-Number_of_Items_Purchased
 
 Top 15 subcategories account for `r round(sum(Top15_subcat[,2])/sum(Items_sold_per_subcategory)*100, digits = 2)`% of sales in volume
 
-##PCA analysis
+##PCA analysis for the revised subcategories
 
 ```{r}
 # Here is how the `principal` function is used 
@@ -513,6 +513,8 @@ Let's look at the **variance explained** as well as the **eigenvalues** :
 iprint.df(round(Variance_Explained_Table, 2))
 ```
 
+And let's look at the skree plot again. 
+
 ```{r}
 eigenvalues  <- Variance_Explained_Table[, "Eigenvalue"]
 df           <- cbind(as.data.frame(eigenvalues), c(1:length(eigenvalues)), rep(1, length(eigenvalues)))
@@ -528,7 +530,7 @@ Loking at the graph and table above, we chose to take the top 40 factors, to exp
 factors_selected = 40
 ```
 
-To better visualise them, we will use the "varimax" rotation. For our data, the `r factors_selected` selected factors look as follows after this rotation: 
+To better visualize them, we will use the "varimax" rotation. For our data, the `r factors_selected` selected factors look as follows after this rotation: 
 
 ```{r, echo = FALSE}
 Rotated_Results<-principal(SubCategory_matrix, nfactors=max(factors_selected), rotate="varimax",score=TRUE)
@@ -555,22 +557,10 @@ iprint.df(Rotated_Factors_thres, scale=TRUE)
 
 # Customer clustering
 
-From the Factor Analysis performed above, we have extracted the 40 most important factors. For the sake of simplicity, each factor will be represented buy the subcategory the most important.
+From the Factor Analysis performed above, we have extracted the 40 most important subcategories for our analysis. For the sake of simplicity, each factor will be labelled by the subcategory which was deemed as the most important in that factor.
 
 ```{r, echo=FALSE}
-#Constructing the Factors retained
-FactorName=NULL
-for (i in 1:ncol(Rotated_Factors)){
-  rowIndex=which(Rotated_Factors[,i]==max(Rotated_Factors[,i]))[1]
-  FactorName=c(FactorName,rownames(Rotated_Factors[rowIndex,]))
-}
-
-```
-
-We'll use the Kmeans method to cluster our customers.
-
-```{r setupcluster, echo=FALSE, tidy=TRUE}
-
+# Defining some basic parameters
 # Please ENTER the number of clusters to eventually use for this report
 numb_clusters_used = 10 # for boats possibly use 5, for Mall_Visits use 3
 
@@ -592,11 +582,15 @@ hclust_method = "ward.D"
 # DEFAULT is "Lloyd"
 kmeans_method = "Lloyd"
 
-```
 
-```{r setupcluster2, echo=FALSE, tidy=TRUE}
+#Constructing the list of Factors retained
+FactorName=NULL
+for (i in 1:ncol(Rotated_Factors)){
+  rowIndex=which(Rotated_Factors[,i]==max(Rotated_Factors[,i]))[1]
+  FactorName=c(FactorName,rownames(Rotated_Factors[rowIndex,]))
+}
 
-# Same as the initial data
+# Initializing the data
 ProjectData <- SubCategory_matrix
 
 segmentation_attributes_used <- FactorName
@@ -608,18 +602,11 @@ ProjectData_profile <- ProjectData[,profile_attributes_used]
 
 ```
 
-The histogram of all pairwise distances for the `r distance_used` distance:
+##Hierarchial Clustering
 
-```{r}
-Pairwise_Distances <- dist(ProjectData_segment, method = distance_used) 
-qplot(as.vector(Pairwise_Distances), xlab="Histogram of all pairwise Distances between observtions", ylab="Frequency", binwidth=1)
-```
+Let's fist use the **Hierarchial Clustering** method, as we need to understand how many potential segments we have in our data. We could do some exploratory analysis using a Dendrogram, but the data here is too massive to be represented in any reasonable way in this format. 
 
-###Hierarchial Clustering
-
-Let's fist use the **Hierarchial Clustering** method, as we do not know for now how many segments there are in our data.It should produce a Dendrogram, but here the data seems to be too massive to be represented in such a format...
-
-We will visualise now the distance with respect to the number of clusters to be able to choose the appropriate number of clusters.
+We will visualize now the distance with respect to the number of clusters to be able to choose the appropriate number of clusters.
 
 
 ```{r, echo = FALSE}
@@ -640,7 +627,9 @@ ggplot(df1[1:50,], aes(x=index[1:50], y=distances[1:50])) + geom_line() + xlab("
 
 As a rule of thumb, one can select the number of clusters as the "elbow" of this plot: this is the place in the tree where, if we traverse the tree from the leaves to its root, we need to make the "longest jump" before we merge further the segments at that tree level. 
 
-For now let's consider the `r numb_clusters_used`-segments solution found by the Hierarchical Clustering method (using the `r distance_used` distance and the hclust option `r hclust_method`). We can also see the segment each observation (respondent in this case) belongs to for the first `r min(max_data_report,nrow(ProjectData))` people:
+For now let's consider the `r numb_clusters_used`-segments as this is the point of the elbow in the plot above (using the `r distance_used` distance and the hclust option `r hclust_method`). 
+
+We can also take a quick peek at our data to see which of these 10 segments our first 10 obsevations in the dataset are assigned to: 
 
 ```{r}
 Nb_Clusters=10
@@ -653,7 +642,8 @@ colnames(ProjectData_with_hclust_membership)<-c("Observation Number","Cluster_Me
 knitr::kable(round(head(ProjectData_with_hclust_membership, max_data_report), 2))
 ```
 
-Let's now try to observe these clusters. At first tlet's visualize how many customers are in each cluster. 
+Let's now try to visualize these clusters even more. First let's visualize how many customers are in each cluster. 
+
 ```{r, echo=FALSE}
 # Plot of the distribution of number of customers per cluster
 
@@ -661,9 +651,9 @@ ggplot(as.data.frame(ProjectData_with_hclust_membership), aes(as.data.frame(Proj
 
 ```
 
-The Cluster number 2 seems to be the one with the most of customers.
+The cluster number 2 seems to be the one with the most customers.
 
-Let's try to visualize the definition of each cluster.
+Let's try to create a table which shows each cluster broken down by the coefficients of the principal factors. The rows represents the various clusters in the following table. 
 
 ```{r, echo=FALSE}
 #
@@ -681,8 +671,18 @@ iprint.df(Cluster_matrix)
 
 ```
 
+##K Means Clustering
+
 **Using Kmean Clustering**
 
+We will also use the k mean clustering method to segment our customers. As we found in the hierarchical clustering method, that picking 10 segments can be relevant for our analysis, we will choose 10 for the number of clusters used. 
+
+The histogram of all pairwise distances for the `r distance_used` distance for the k means clustering:
+
+```{r}
+Pairwise_Distances <- dist(ProjectData_segment, method = distance_used) 
+qplot(as.vector(Pairwise_Distances), xlab="Histogram of all pairwise Distances between observtions", ylab="Frequency", binwidth=1)
+```
 
 Here are the clusters our observations belong to when we select `r numb_clusters_used` clusters and the `r kmeans_method` kmeans method, for the first `r min(max_data_report,nrow(ProjectData))` people (note that the cluster IDs may differ from those from hierarchical clustering):
 
@@ -695,7 +695,7 @@ colnames(ProjectData_with_kmeans_membership)<-c("Observation Number","Cluster_Me
 knitr::kable(round(head(ProjectData_with_kmeans_membership, max_data_report), 2))
 ```
 
-Let's visualize the data, just like for the previous method.
+Let's visualize the data, just like for the hierarchical clsutering method.
 
 ```{r, echo=FALSE}
 # Plot of the distribution of number of customers per cluster
@@ -704,7 +704,7 @@ ggplot(as.data.frame(ProjectData_with_kmeans_membership), aes(as.data.frame(Proj
 
 ```
 
-The result here is widely differentm with a cluster 5 that has much more customers than the other ones. Let's visualize the attributes of the clusters by computing the purchases of the "mean customer" for each cluster.
+The result here is quite different as cluster 5 that has much more customers than the other ones. Let's visualize the attributes of the clusters by computing the purchases of the "mean customer" for each cluster.
 
 ```{r, echo=FALSE}
 #
@@ -732,4 +732,4 @@ We weren't able to go farther on customer beghavior prediction.
 The next steps would have been:
 1.  Compute the distances between the customers who have purchased items in January and February and each cluster, based on their purchases in January. 
 2.  Use it to assign them to a particular cluster.
-3.  Use the informations of each cluster to see wht each customer might need and therefore might order next.
+3.  Use the informations of each cluster to see what each customer might need and therefore what they might order next.
